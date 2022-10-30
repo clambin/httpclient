@@ -3,7 +3,6 @@ package httpclient_test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/clambin/go-metrics/tools"
 	"github.com/clambin/httpclient"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
@@ -33,38 +32,15 @@ func TestClient_Do(t *testing.T) {
 	response, err = doCall(c, s.URL+"/foo")
 	require.Error(t, err)
 
-	ch := make(chan prometheus.Metric)
-	go metrics.Latency.Collect(ch)
-
-	expectedLatencyCounters := map[string]uint64{
+	assert.Equal(t, map[string]uint64{
 		"/foo": 2,
 		"/bar": 1,
-	}
+	}, getLatencyCounters(t, prometheus.DefaultGatherer, "foo_bar_"))
 
-	for range expectedLatencyCounters {
-		desc := <-ch
-		endpoint := *tools.MetricValue(desc).GetLabel()[1].Value
-		expected, ok := expectedLatencyCounters[endpoint]
-		require.True(t, ok)
-		assert.Equal(t, expected, tools.MetricValue(desc).GetSummary().GetSampleCount(), endpoint)
-	}
-
-	ch = make(chan prometheus.Metric)
-	go metrics.Errors.Collect(ch)
-	expectedErrorCounters := map[string]float64{
+	assert.Equal(t, map[string]float64{
 		"/foo": 1,
 		"/bar": 0,
-	}
-
-	for range expectedErrorCounters {
-		desc := <-ch
-		endpoint := *tools.MetricValue(desc).GetLabel()[1].Value
-		expected, ok := expectedErrorCounters[endpoint]
-		require.True(t, ok)
-		assert.Equal(t, expected, tools.MetricValue(desc).GetCounter().GetValue(), endpoint)
-
-	}
-
+	}, getErrorMetrics(t, prometheus.DefaultGatherer, "foo_bar_"))
 }
 
 type testStruct struct {
