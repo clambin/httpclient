@@ -6,7 +6,7 @@ require (
 	github.com/clambin/cache v0.0.5
 	github.com/clambin/go-metrics v0.6.0
 	github.com/prometheus/client_golang v1.13.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 )
 
 require (
@@ -19,7 +19,7 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
-	github.com/stretchr/objx v0.4.0 // indirect
+	github.com/stretchr/objx v0.5.0 // indirect
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
