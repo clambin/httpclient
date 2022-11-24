@@ -18,7 +18,8 @@ func TestClientMetrics_MakeLatencyTimer(t *testing.T) {
 	// MakeLatencyTimer returns nil if no Latency metric is set
 	assert.Nil(t, cfg.MakeLatencyTimer())
 
-	cfg = httpclient.NewMetrics("foo", "")
+	r := prometheus.NewRegistry()
+	cfg = httpclient.NewMetrics("foo", "", r)
 
 	// collect metrics
 	timer := cfg.MakeLatencyTimer("foo", "/bar", http.MethodGet)
@@ -27,7 +28,7 @@ func TestClientMetrics_MakeLatencyTimer(t *testing.T) {
 	timer.ObserveDuration()
 
 	// one measurement should be collected
-	m, err := prometheus.DefaultGatherer.Gather()
+	m, err := r.Gather()
 	require.NoError(t, err)
 	var found bool
 	for _, entry := range m {
@@ -48,20 +49,21 @@ func TestClientMetrics_ReportErrors(t *testing.T) {
 	// ReportErrors doesn't crash when no Errors metric is set
 	cfg.ReportErrors(nil)
 
-	cfg = httpclient.NewMetrics("bar", "")
+	r := prometheus.NewRegistry()
+	cfg = httpclient.NewMetrics("bar", "", r)
 
 	// collect metrics
 	cfg.ReportErrors(nil, "foo", "/bar", http.MethodGet)
 
 	// do a measurement
-	count := getErrorMetrics(t, prometheus.DefaultGatherer, "bar_")
+	count := getErrorMetrics(t, r, "bar_")
 	assert.Equal(t, map[string]float64{"/bar": 0}, count)
 
 	// record an error
 	cfg.ReportErrors(errors.New("some error"), "foo", "/bar", http.MethodGet)
 
 	// counter should now be 1
-	count = getErrorMetrics(t, prometheus.DefaultGatherer, "bar_")
+	count = getErrorMetrics(t, r, "bar_")
 	assert.Equal(t, map[string]float64{"/bar": 1}, count)
 }
 

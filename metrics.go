@@ -2,7 +2,6 @@ package httpclient
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 // Metrics contains Prometheus metrics to capture during API calls. Each metric is expected to have two labels:
@@ -13,17 +12,22 @@ type Metrics struct {
 }
 
 // NewMetrics creates a standard set of Prometheus metrics to capture during API calls.
-func NewMetrics(namespace, subsystem string) Metrics {
-	return Metrics{
-		Latency: promauto.NewSummaryVec(prometheus.SummaryOpts{
+func NewMetrics(namespace, subsystem string, r prometheus.Registerer) Metrics {
+	m := Metrics{
+		Latency: prometheus.NewSummaryVec(prometheus.SummaryOpts{
 			Name: prometheus.BuildFQName(namespace, subsystem, "api_latency"),
 			Help: "Latency of Reporter API calls",
 		}, []string{"application", "endpoint", "method"}),
-		Errors: promauto.NewCounterVec(prometheus.CounterOpts{
+		Errors: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: prometheus.BuildFQName(namespace, subsystem, "api_errors_total"),
 			Help: "Number of failed Reporter API calls",
 		}, []string{"application", "endpoint", "method"}),
 	}
+	if r == nil {
+		r = prometheus.DefaultRegisterer
+	}
+	r.MustRegister(m.Latency, m.Errors)
+	return m
 }
 
 // ReportErrors measures any API client call failures:

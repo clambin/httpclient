@@ -13,7 +13,8 @@ import (
 )
 
 func TestClient_Do(t *testing.T) {
-	metrics := httpclient.NewMetrics("foo", "bar")
+	r := prometheus.NewRegistry()
+	metrics := httpclient.NewMetrics("foo", "bar", r)
 	s := httptest.NewServer(http.HandlerFunc(handler))
 	c := &httpclient.InstrumentedClient{
 		Options:     httpclient.Options{PrometheusMetrics: metrics},
@@ -35,12 +36,12 @@ func TestClient_Do(t *testing.T) {
 	assert.Equal(t, map[string]uint64{
 		"/foo": 2,
 		"/bar": 1,
-	}, getLatencyCounters(t, prometheus.DefaultGatherer, "foo_bar_"))
+	}, getLatencyCounters(t, r, "foo_bar_"))
 
 	assert.Equal(t, map[string]float64{
 		"/foo": 1,
 		"/bar": 0,
-	}, getErrorMetrics(t, prometheus.DefaultGatherer, "foo_bar_"))
+	}, getErrorMetrics(t, r, "foo_bar_"))
 }
 
 type testStruct struct {
