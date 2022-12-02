@@ -1,8 +1,7 @@
-package httpclient_test
+package httpclient
 
 import (
 	"errors"
-	"github.com/clambin/httpclient"
 	"github.com/prometheus/client_golang/prometheus"
 	pcg "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
@@ -13,16 +12,17 @@ import (
 )
 
 func TestClientMetrics_MakeLatencyTimer(t *testing.T) {
-	cfg := httpclient.Metrics{}
+	cfg := &Metrics{}
 
-	// MakeLatencyTimer returns nil if no Latency metric is set
-	assert.Nil(t, cfg.MakeLatencyTimer())
+	// makeLatencyTimer returns nil if no latency metric is set
+	assert.Nil(t, cfg.makeLatencyTimer())
 
 	r := prometheus.NewRegistry()
-	cfg = httpclient.NewMetrics("foo", "", r)
+	cfg = NewMetrics("foo", "")
+	r.MustRegister(cfg)
 
 	// collect metrics
-	timer := cfg.MakeLatencyTimer("foo", "/bar", http.MethodGet)
+	timer := cfg.makeLatencyTimer("foo", "/bar", http.MethodGet)
 	require.NotNil(t, timer)
 	time.Sleep(10 * time.Millisecond)
 	timer.ObserveDuration()
@@ -44,23 +44,24 @@ func TestClientMetrics_MakeLatencyTimer(t *testing.T) {
 }
 
 func TestClientMetrics_ReportErrors(t *testing.T) {
-	cfg := httpclient.Metrics{}
+	cfg := &Metrics{}
 
-	// ReportErrors doesn't crash when no Errors metric is set
-	cfg.ReportErrors(nil)
+	// reportErrors doesn't crash when no errors metric is set
+	cfg.reportErrors(nil)
 
 	r := prometheus.NewRegistry()
-	cfg = httpclient.NewMetrics("bar", "", r)
+	cfg = NewMetrics("bar", "")
+	r.MustRegister(cfg)
 
 	// collect metrics
-	cfg.ReportErrors(nil, "foo", "/bar", http.MethodGet)
+	cfg.reportErrors(nil, "foo", "/bar", http.MethodGet)
 
 	// do a measurement
 	count := getErrorMetrics(t, r, "bar_")
 	assert.Equal(t, map[string]float64{"/bar": 0}, count)
 
 	// record an error
-	cfg.ReportErrors(errors.New("some error"), "foo", "/bar", http.MethodGet)
+	cfg.reportErrors(errors.New("some error"), "foo", "/bar", http.MethodGet)
 
 	// counter should now be 1
 	count = getErrorMetrics(t, r, "bar_")
@@ -68,11 +69,11 @@ func TestClientMetrics_ReportErrors(t *testing.T) {
 }
 
 func TestClientMetrics_Nil(t *testing.T) {
-	cfg := httpclient.Metrics{}
+	cfg := Metrics{}
 
-	timer := cfg.MakeLatencyTimer("snafu")
+	timer := cfg.makeLatencyTimer("snafu")
 	assert.Nil(t, timer)
-	cfg.ReportErrors(nil, "foo")
+	cfg.reportErrors(nil, "foo")
 }
 
 func getErrorMetrics(t *testing.T, g prometheus.Gatherer, prefix string) map[string]float64 {
@@ -92,6 +93,7 @@ func getErrorMetrics(t *testing.T, g prometheus.Gatherer, prefix string) map[str
 	return counters
 }
 
+/*
 func getLatencyCounters(t *testing.T, g prometheus.Gatherer, prefix string) map[string]uint64 {
 	t.Helper()
 
@@ -108,3 +110,4 @@ func getLatencyCounters(t *testing.T, g prometheus.Gatherer, prefix string) map[
 	}
 	return counters
 }
+*/

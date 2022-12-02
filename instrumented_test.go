@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/clambin/httpclient"
 	"github.com/prometheus/client_golang/prometheus"
+	pcg "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -14,7 +15,8 @@ import (
 
 func TestClient_Do(t *testing.T) {
 	r := prometheus.NewRegistry()
-	metrics := httpclient.NewMetrics("foo", "bar", r)
+	metrics := httpclient.NewMetrics("foo", "bar")
+	r.MustRegister(metrics)
 	s := httptest.NewServer(http.HandlerFunc(handler))
 	c := &httpclient.InstrumentedClient{
 		Options:     httpclient.Options{PrometheusMetrics: metrics},
@@ -74,4 +76,38 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		Name: "bar",
 		Age:  42,
 	})
+}
+
+func getErrorMetrics(t *testing.T, g prometheus.Gatherer, prefix string) map[string]float64 {
+	t.Helper()
+
+	counters := make(map[string]float64)
+	m, err := g.Gather()
+	require.NoError(t, err)
+	for _, entry := range m {
+		if *entry.Name == prefix+"api_errors_total" {
+			require.Equal(t, pcg.MetricType_COUNTER, *entry.Type)
+			for _, metric := range entry.Metric {
+				counters[*metric.Label[1].Value] = *metric.Counter.Value
+			}
+		}
+	}
+	return counters
+}
+
+func getLatencyCounters(t *testing.T, g prometheus.Gatherer, prefix string) map[string]uint64 {
+	t.Helper()
+
+	counters := make(map[string]uint64)
+	m, err := g.Gather()
+	require.NoError(t, err)
+	for _, entry := range m {
+		if *entry.Name == prefix+"api_latency" {
+			require.Equal(t, pcg.MetricType_SUMMARY, *entry.Type)
+			for _, metric := range entry.Metric {
+				counters[*metric.Label[1].Value] = *metric.Summary.SampleCount
+			}
+		}
+	}
+	return counters
 }
